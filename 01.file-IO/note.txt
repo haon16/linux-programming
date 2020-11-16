@@ -1,0 +1,97 @@
+open函数：
+	int open(char *pathname, int flags)
+	参数：
+			pathname：欲打开的文件路径名
+			flags：文件打开方式：	O_RDONLY|O_WRONLY|O_RDWR	O_CREAT|O_APPEND|O_TRUNC|O_EXCL|O_NONBLOCK...
+	返回值：
+			成功：打开文件所得到对应的文件描述符（整数）
+			失败：-1，设置error
+	
+	int open(char *pathname, int flags, mode_t mode)
+	...同上
+			mode：参数3使用的前提，参数2指定了O_CREAT	取值8进制数，用来描述文件的访问权限 rwx 0644
+				创建文件最终权限 = mode & ~umask
+	...同上
+
+close函数：
+	int close(int fd)
+
+错误处理函数：（与errno相关）
+	printf("xxx error: %d\n", errno);
+
+	char *strerror(int errnum)
+		printf("xxx error: %s\n", strerror(errno));
+	
+	void perror(const char *s)
+		perror("open error");
+
+------------------------------------------------------------------------------------------------------------------------------
+
+read函数：
+	ssize_t read(int fd, void *buf, size_t count)
+	参数：
+			fd：文件描述符
+			buf：存数据的缓冲区
+			count：缓冲区的大小
+	返回值：
+			成功：读到的字节数
+			失败：-1，设置errno
+			-1：并且errno = EAGAIN 或 EWOULDBLOCK，说明不是read失败，而是read在以非阻塞方式读一个设备文件（网络文件），并且文件无数据
+
+write函数：
+	ssize_t write(int fd, const void *buf, size_t count)
+	参数：
+			fd：文件描述符
+			buf：待写出数据的缓冲区
+			count：数据大小
+	返回值：
+			成功：写入的字节数
+			失败：-1，设置errno
+
+------------------------------------------------------------------------------------------------------------------------------
+
+文件描述符：
+	PCB进程控制块：本质是结构体
+	成员：文件描述符表
+	文件描述符：0/1/2/3/...1023	表中可用的最小的
+	0 - STDIN_FILENO
+	1 - STD_OUT_FILENO
+	2 - STD_ERR_FILENO
+
+------------------------------------------------------------------------------------------------------------------------------
+
+阻塞、非阻塞：	是设备文件、网络文件的属性
+	产生阻塞的场景：读设备文件、读网络文件。（读常规文件无阻塞概念）
+	/dev/tty --终端文件
+	open("dev/tty", O_RDWR|O_NONBLOCK)	--设置/dev/tty非阻塞状态（默认为阻塞状态）
+
+------------------------------------------------------------------------------------------------------------------------------
+
+fcntl：
+	int fcntl(fd, cmd, ...)
+
+	int flags = fcntl(fd, F_GETFL)
+	flags |= O_NONBLOCK
+	fcntl(fd, F_SETFL, flags)
+	获取文件状态：F_GETFL
+	设置文件状态：F_SETFL
+
+------------------------------------------------------------------------------------------------------------------------------
+
+lseek函数：
+	off_t lseek(int fd, off_t offset, int whence)
+	参数：
+		fd：文件描述符
+		offset：偏移量
+		whence：起始偏移量：SEEK_SET、SEEK_CUR、SEEK_END
+	返回值：
+		成功：较起始位置偏移量
+		失败：-1 errno
+	应用场景：
+		1.文件的“读”、“写”使用同一偏移位置
+		2.使用lseek获取文件大小 lseek(fd, 0, SEEK_END)
+		3.使用lseek拓展文件大小：要想使文件大小真正拓展，必须引起IO操作		（使用truncate函数可以直接拓展文件大小 int ret = truncate(filename, size)）
+			od -tcx filename 查看文件的16进制表示形式
+			od -tcd filename 查看文件的10进制表示形式
+
+------------------------------------------------------------------------------------------------------------------------------
