@@ -68,18 +68,22 @@ write函数：
 ------------------------------------------------------------------------------------------------------------------------------
 
 fcntl：
-	int fcntl(fd, cmd, ...)		不重新打开文件，修改其访问控制属性 ...
+	int fcntl(fd, cmd, ...)		
+	功能：不重新打开文件，修改其访问控制属性 ...
 
-	int flags = fcntl(fd, F_GETFL)
-	flags |= O_NONBLOCK
-	fcntl(fd, F_SETFL, flags)
+	e.g:
+		int flags = fcntl(fd, F_GETFL)
+		flags |= O_NONBLOCK
+		fcntl(fd, F_SETFL, flags)
+
 	获取文件状态：F_GETFL
 	设置文件状态：F_SETFL
 
 ------------------------------------------------------------------------------------------------------------------------------
 
 lseek函数：
-	off_t lseek(int fd, off_t offset, int whence)		修改文件读写位置
+	off_t lseek(int fd, off_t offset, int whence)		
+	功能：修改文件读写位置
 	参数：
 		fd：文件描述符
 		offset：偏移量
