@@ -1,16 +1,16 @@
 open函数：
 	int open(char *pathname, int flags)
 	参数：
-			pathname：欲打开的文件路径名
-			flags：文件打开方式：	O_RDONLY|O_WRONLY|O_RDWR	O_CREAT|O_APPEND|O_TRUNC|O_EXCL|O_NONBLOCK...
+		pathname：欲打开的文件路径名
+		flags：文件打开方式：	O_RDONLY|O_WRONLY|O_RDWR	O_CREAT|O_APPEND|O_TRUNC|O_EXCL|O_NONBLOCK...
 	返回值：
-			成功：打开文件所得到对应的文件描述符（整数）
-			失败：-1，设置error
+		成功：打开文件所得到对应的文件描述符（整数）
+		失败：-1，设置error
 	
 	int open(char *pathname, int flags, mode_t mode)
 	...同上
-			mode：参数3使用的前提，参数2指定了O_CREAT	取值8进制数，用来描述文件的访问权限 rwx 0644
-				创建文件最终权限 = mode & ~umask
+		mode：参数3使用的前提，参数2指定了O_CREAT	取值8进制数，用来描述文件的访问权限 rwx 0644
+			创建文件最终权限 = mode & ~umask
 	...同上
 
 close函数：
@@ -30,23 +30,24 @@ close函数：
 read函数：
 	ssize_t read(int fd, void *buf, size_t count)
 	参数：
-			fd：文件描述符
-			buf：存数据的缓冲区
-			count：缓冲区的大小
+		fd：文件描述符
+		buf：存数据的缓冲区
+		count：缓冲区的大小
 	返回值：
-			成功：读到的字节数
-			失败：-1，设置errno
+		成功：读到的字节数
+		失败：
+			-1，设置errno
 			-1：并且errno = EAGAIN 或 EWOULDBLOCK，说明不是read失败，而是read在以非阻塞方式读一个设备文件（网络文件），并且文件无数据
 
 write函数：
 	ssize_t write(int fd, const void *buf, size_t count)
 	参数：
-			fd：文件描述符
-			buf：待写出数据的缓冲区
-			count：数据大小
+		fd：文件描述符
+		buf：待写出数据的缓冲区
+		count：数据大小
 	返回值：
-			成功：写入的字节数
-			失败：-1，设置errno
+		成功：写入的字节数
+		失败：-1，设置errno
 
 ------------------------------------------------------------------------------------------------------------------------------
 
