@@ -120,3 +120,166 @@ mmap函数的保险调用方式：
     p = (int *)mmap(NULL, 40, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 
 ------------------------------------------------------------------------------------------------------------------------------
+
+信号共性：
+    简单、不能携带大量信息、满足条件才发送
+
+信号的特质：
+    信号是软件层面上的“中断”。一旦信号产生，无论程序执行到什么位置，必须立即停止运行，处理信号，处理结束，再继续执行后续指令
+    所有信号的产生及处理全部都是由 内核 完成的
+
+信号相关的概念
+    产生信号：
+        1.按键产生
+        2.系统调用产生
+        3.软件条件产生
+        4.硬件异常产生
+        5.命令产生
+    
+    概念：
+        未决：产生与递达之间的状态
+        递达：产生并且送达到进程。直接被内核处理掉
+        信号处理方式：执行默认处理动作、忽略、捕捉（自定义）
+        阻塞信号集（信号屏蔽字）：本质是位图。用来记录信号的屏蔽状态。一旦信号被屏蔽，在解除屏蔽前，一直处于未决态
+        未决信号集：本质是位图。用来记录信号的处理状态。该信号集中的信号表示，已经产生，但尚未被处理
+
+信号4要素：
+    信号使用之前，应先确定其4要素，而后再用！！！
+    信号编号、信号名称、信号对应事件、信号默认处理动作
+
+------------------------------------------------------------------------------------------------------------------------------
+
+kill命令和kill函数
+    int kill(pid_t pid, int signum)
+    参数：
+        pid：
+            > 0：发送信号给指定进程
+            = 0：发送信号给跟调用kill函数的那个进程处于同一进程组的进程
+            <-1：取绝对值，杀死该绝对值所对应的进程组的所有组员
+            =-1：发送信号给有权限发送的所有进程
+        signum：
+            待发送的信号
+
+------------------------------------------------------------------------------------------------------------------------------
+
+alarm函数：     （自然计时法）
+    功能：定时发送SIGALRM给当前进程
+    unsigned int alarm(unsigned int seconds)
+    参数：
+        seconds：定时秒数
+    返回值：
+        上次定时剩余时间
+        无错误现象
+    
+    alarm(0)：取消闹钟
+    time命令：查看程序执行时间。    实际时间=用户时间+内核时间+等待时间     -->优化瓶颈 IO
+
+------------------------------------------------------------------------------------------------------------------------------
+
+setitimer函数：
+    功能：设置定时器（闹钟），可代替alarm函数。精度微妙us，可以实现周期定时
+    int setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value)
+    参数：
+        which：
+            ITIMER_REAL：采用自然计时            ->  SIGALRM
+            ITIMER_VIRTUAL：采用用户空间计时     ->  SIGVTALRM
+            ITIMER_PROF：采用内核+用户空间计时   ->  SIGPROF  
+        new_value：定时秒数
+            类型：struct itimerval
+                {
+                    struct timeval 
+                    {
+                        time_t      tv_sec;
+                        suseconds_t tv_usec;
+                    }it_interval;               用来设定两次定时任务之间间隔的时间       
+                    struct timeval 
+                    {
+                        time_t      tv_sec;
+                        suseconds_t tv_usec;
+                    }it_value;                  定时的时长
+                }
+        old_value：传出参数，上次定时剩余时间
+    返回值：
+        成功：0
+        失败：-1
+    
+    e.g.：
+        struct itimerval new_t;
+        struct itimerval old_t;
+        new_t.it_interval.tv_sec = 1;
+        new_t.it_interval.tv_usec = 0;
+        new_t.it_value.tv_sec = 0;
+        new_t.it_value.tv_usec = 0;
+        setitimer(&new_t, &old_t);
+
+其他几个发信号函数：
+    int raise(int sig);
+    void abort(void);
+
+------------------------------------------------------------------------------------------------------------------------------
+
+信号集操作函数：
+    sigset_t set;           自定义信号集
+    sigemptyset(sigset_t *set);                清空信号集
+    sigfillset(sigset_t *set);              全部置1
+    sigaddset(sigset_t *set, int signum);   将一个信号添加到集合中
+    sigdelset(sigset_t *set, int signum);   将一个信号从集合中移除
+    sigismember(const sigset_t *set, int signum);   判断一个信号是否在集合中。在返回1，不在返回0
+
+设置信号屏蔽字和解除屏蔽：
+    int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+    参数：
+        how：
+            SIG_BLOCK   设置阻塞
+            SIG_UNBLOCK 取消阻塞
+            SIG_SETMASK 用自定义set替换mask
+        set：自定义set
+        oldset：旧有的mask
+
+查看未决信号集：
+    int sigpending(sigset_t *set);
+    参数
+        set：传出的未决信号集
+
+------------------------------------------------------------------------------------------------------------------------------
+
+信号捕捉：
+    typedef void (*sighandler_t)(int);
+    sighandler_t signal(int signum, sighandler_t handler);
+    参数：
+        signum：注册的信号
+        handler：回调函数
+    返回值：
+        成功：前一个回调函数指针
+        失败：SIG_ERR
+
+    int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
+    参数：
+        signum：注册的信号
+        act：注册信息
+            struct sigaction {
+               void     (*sa_handler)(int);                             回调函数
+               void     (*sa_sigaction)(int, siginfo_t *, void *);      如果信号要传递更多信息，会用到，sa_flags也要设置成相应的值
+               sigset_t   sa_mask;                                      屏蔽字
+               int        sa_flags;                                     0为默认属性，执行捕捉函数期间会自动屏蔽该信号。
+               void     (*sa_restorer)(void);                           
+           };
+        oldact：上一次注册的信息
+    返回值：
+        成功：0
+        失败：-1
+
+
+    系统调用分类：
+        1、慢速系统调用：可能会使进程永远阻塞的一类，如果在阻塞期间收到一个信号，该系统调用就会被中断，不再继续执行（早期），也可以设定系统调用是否重启。如：read、write、pause、wait
+        2、其他系统调用：getpid、getppid、fork
+
+    可修改sa_flags参数来设置被信号中断后系统调用是否重启。SA_INTERRUPT不重启、SA_RESTART重启
+    sa_flags还有很多可选参数：如捕捉到信号后，在执行捕捉函数期间，不希望自动阻塞该信号，可将sa_flags设置为SA_NODEFER，除非sa_mask中包含该信号
+
+------------------------------------------------------------------------------------------------------------------------------
+
+信号捕捉特性：
+    1、捕捉函数执行期间，信号屏蔽字由 mask --> sa_mask，捕捉函数执行结束，恢复回mask
+    2、捕捉函数执行期间，本信号自动被屏蔽（sa_flags = 0）
+    3、捕捉函数执行期间，被屏蔽信号多次发送，接触屏蔽后只处理一次
