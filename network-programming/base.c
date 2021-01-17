@@ -40,10 +40,13 @@ int Listen(int sockfd, int backlog)
 
 int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
-    int clnt_sock = accept(sockfd, addr, addrlen);
-    if(clnt_sock == -1)
+    int clnt_sock;
+    while((clnt_sock = accept(sockfd, addr, addrlen)) == -1)
     {
-        sys_err("accept() error");
+        if(errno == EINTR)      //被信号打断
+            continue;
+        else
+            sys_err("accept() error");
     }
     return clnt_sock;
 }
@@ -54,6 +57,42 @@ int Connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
     if(ret == -1)
     {
         sys_err("connect() error");
+    }
+    return ret;
+}
+
+ssize_t Read(int fd, void *buf, size_t count)
+{
+    int ret;
+    while((ret = read(fd, buf, count)) == -1)
+    {
+        if(errno == EINTR)
+            continue;
+        else
+            sys_err("read() error");
+    }
+    return ret;
+}
+
+ssize_t Write(int fd, const void *buf, size_t count)
+{
+    int ret;
+    while((ret = write(fd, buf, count)) == -1)
+    {
+        if(errno == EINTR)
+            continue;
+        else
+            sys_err("write() error");
+    }
+    return ret;
+}
+
+int Close(int fd)
+{
+    int ret = close(fd);
+    if(ret == -1)
+    {
+        sys_err("close() error");
     }
     return ret;
 }

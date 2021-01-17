@@ -1,0 +1,55 @@
+多进程并发服务器：
+    1.lfd = Socket()
+    2.Bind()
+    3.Listen()
+    4.while(1)
+    {
+        cfd = Accept()
+        pid = fork()
+        if(pid == 0)
+        {
+            ...
+            break
+        }
+        else if(pid > 0)
+        {
+            ...
+            continue
+        }
+    }
+    5.子进程：
+        close(lfd)
+        while(1)
+        {
+            read(cfd)
+            小--大
+            write(cfd)
+        }
+      父进程：
+        close(cfd)
+        注册信号捕捉函数    SIGCHLD
+        在回调函数中，完成子进程回收    while(waitpid())
+
+---------------------------------------------------------------------------------------------------------------
+
+多线程并发服务器：
+    1.lfd = Socket()
+    2.Bind()
+    3.Listen()
+    4.while(1)
+    {
+        cfd = Accept()
+        pthread_create(&tid, NULL, tfn, cfd)
+        pthread_detach(tid)     //pthread_detach回收无法收到返回值，pthread_join回收会阻塞，所以如果要求收到返回值，可以创建一个新线程使用pthread_join专门用于回收子进程
+    }
+    5.子线程：
+        void *tfn(void *arg)
+        {
+            while(1)
+            {
+                read(cfd)
+                小--大
+                write()
+            }
+            pthread_exit((void*)10);
+        }

@@ -2,6 +2,7 @@
 //进行错误处理函数封装后的server
 
 #include "../base.h"
+#include <ctype.h>          // toupper()
 
 int main(int argc, char *argv[])
 {
@@ -25,21 +26,21 @@ int main(int argc, char *argv[])
     char buf[BUFSIZ];
     while(1)
     {
-        int ret = read(clnt_sock, buf, sizeof(buf));
+        int ret = Read(clnt_sock, buf, sizeof(buf));
         if(ret == 0)
         {
             break;
         }
-        write(STDOUT_FILENO, buf, ret);
+        Write(STDOUT_FILENO, buf, ret);
 
         for(int i = 0; i < ret; i++)
         {
             buf[i] = toupper(buf[i]);
         }
-        write(clnt_sock, buf, ret);
+        Write(clnt_sock, buf, ret);
     }
 
-    close(serv_sock);
-    close(clnt_sock);
+    Close(serv_sock);
+    Close(clnt_sock);
     return 0;
 }

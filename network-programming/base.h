@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>          // toupper
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>      // struct sockaddr_in
@@ -17,5 +16,9 @@ int Bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 int Listen(int sockfd, int backlog);
 int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 int Connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+ssize_t Read(int fd, void *buf, size_t count);
+ssize_t Write(int fd, const void *buf, size_t count);
+int Close(int fd);
+
 
 #endif      /* _BASE_H */
