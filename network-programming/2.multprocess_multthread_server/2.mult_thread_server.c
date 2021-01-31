@@ -51,6 +51,9 @@ int main()
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(9999);
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    //int opt = 1;     
+    //setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
     Bind(serv_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
     Listen(serv_sock, 128);

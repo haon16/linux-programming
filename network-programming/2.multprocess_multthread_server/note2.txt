@@ -1,0 +1,42 @@
+TCP状态时序图：
+                                发送SYN             接收ACK、SYN            发送ACK
+    1.主动发起连接请求端：CLOSED --------> SYN_SENT -------------> SYN_SENT --------> ESTABLISHED（数据通信态）
+
+                                                  发送FIN              接收ACK                        接受对端发送FIN                       回发ACK                                              等2MSL时长
+    2.主动关闭连接请求端：ESTABLISHED（数据通信态） --------> FIN_WAIT_1 --------> FIN_WAIT_2（半关闭） ----------------> FIN_WAIT2（半关闭） --------> TIME_WAIT（只有主动关闭连接方，会经历该状态）  --------->  CLOSED
+
+                                              接收SYN           发送ACK、SYN            接受ACK
+    3.被动接受连接请求端：CLOSED -----> LISTEN --------> LISTEN -------------> SYN_RCVD --------> ESTABLISHED（数据通信态）
+
+                                                  接收FIN                            发送ACK                                                      发送FIN             接受ACK
+    4.被动关闭连接请求端：ESTABLISHED（数据通信态） --------> ESTABLISHED（数据通信态） --------> CLOSE_WAIT（说明对端【主动关闭连接端】处于半关闭状态） --------> LAST_ACK --------> CLOSED
+
+    重点：ESTABLISHED、FIN_WAIT_2 <--> CLOSE_WAIT、TIME_WAIT（2MSL）
+
+---------------------------------------------------------------------------------------------------------------
+
+2MSL时长：
+    一定出现在【主动关闭连接请求端】    --- TIME_WAIT
+    保证，最后一个 ACK 能成功被对端接收（等待期间，对端没收到我发的ACK，对端会再次发送FIN请求）
+
+端口复用：
+    int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+    int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+    
+    int opt = 1;     --设置端口复用
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
+
+半关闭：
+    通信双方中，只有一端关闭通信    --- FIN_WAIT2
+    int close(int fd);
+    int shutdown(int sockfd, int how);
+        how:
+            SHUT_RD 关读端
+            SHUT_WR 关写端
+            SHUT_RDWR 关读写
+
+    1.如果有多个进程共享一个套接字，close每被调用一次，计数减1，直到计数为0时，也就是所有进程都调用了close，套接字将被释放
+    2.在多进程中如果一个进程调用了shutdown(sfd, SHUT_RDWR)后，其他的进程将无法进行通信。但如果一个进程close(sfd)将不会影响到其他进程
+
+    shutdown在关闭多个文件描述符应用的文件时，采用全关闭方法。close之关闭一个。
+
