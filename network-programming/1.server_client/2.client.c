@@ -1,5 +1,5 @@
 //2021年1月10日10点46分
-//client实现
+//基本客户端实现
 
 #include <stdio.h>
 #include <stdlib.h>

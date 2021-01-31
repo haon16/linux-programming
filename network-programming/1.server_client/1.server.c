@@ -1,5 +1,5 @@
 //2021年1月19日13点45分
-//server实现
+//基本服务器模型实现
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -11,7 +11,11 @@
 
 void catch_child(int signum)
 {
-    while(waitpid(0, NULL, WNOHANG) > 0);
+    int pid;
+    while((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+    {
+        printf("catch_child pid = %d\n", pid);
+    }
     return;
 }
 

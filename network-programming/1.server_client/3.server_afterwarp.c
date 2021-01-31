@@ -1,5 +1,5 @@
 //2021年1月15日08点07分
-//进行错误处理函数封装后的server
+//进行错误处理函数封装后的基本服务器模型
 
 #include "../base.h"
 #include <ctype.h>          // toupper()

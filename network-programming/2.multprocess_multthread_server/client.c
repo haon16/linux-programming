@@ -1,4 +1,4 @@
-//进行错误处理函数封装后的client，此处用于测试
+//进行错误处理函数封装后的基本客户端模型，此处用于测试
 
 #include "../base.h"
 
@@ -19,6 +19,10 @@ int main(int argc, char *argv[])
     {
         Write(clnt_sock, "hello\n", 6);
         ret = Read(clnt_sock, buf, sizeof(buf));
+        if(ret == 0)
+        {
+            break;
+        }
         Write(STDOUT_FILENO, buf, ret);
         sleep(1);
     }
