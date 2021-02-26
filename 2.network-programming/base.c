@@ -66,9 +66,9 @@ ssize_t Read(int fd, void *buf, size_t count)
 {
     int ret;
     while((ret = read(fd, buf, count)) == -1)
-    {
-        if(errno == EINTR)
-            continue;
+    {                                           //EINTR:被异常中断，需要重新读
+        if(errno == EINTR)                      //EWOULDBLOCK/EAGAIN:以非阻塞方式读，但是没有数据，需要再次读
+            continue;                           //ECONNRESET:说明连接被重置，需要close()
         else
             sys_err("read() error");
     }

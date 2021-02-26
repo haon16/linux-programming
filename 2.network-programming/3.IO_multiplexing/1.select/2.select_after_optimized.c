@@ -1,7 +1,7 @@
 //2021年2月16日12点27分
 //select实现多路IO转接：添加一个自定义数组提高效率
 
-#include "../base.h"
+#include "../../base.h"
 #include <strings.h>
 #include <ctype.h>
 #include <sys/select.h>

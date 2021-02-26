@@ -1,0 +1,59 @@
+多路IO转接：
+
+poll:
+    int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+    fds:监听的文件描述符【数组】
+        struct pollfd 
+        {
+            int   fd;         待监听的文件描述符
+            short events;     带监听的文件描述符对应的监听事件  取值：POLLIN、POLLOUT、POLLERR
+            short revents;    传入时，给0。如果满足对应事件的话，返回非0 --> POLLIN、POLLOUT、POLLERR
+        };
+    nfds:监听数组的，实际有效监听个数   数组大小1024，实际有效监听为3个，传3
+    timeout:超时时长。单位：毫秒
+        -1：阻塞等待
+        0：立即返回，不阻塞进程
+        >0：等待指定毫秒数
+    返回值：返回满足对应监听事件的文件描述符总个数
+
+---------------------------------------------------------------------------------------------------------------
+
+思路分析：
+    struct pollfd pfds[1024];
+
+    pfds[0].fd = lfd;
+    pfds[0].events = POLLIN;
+    pfds[0].revents = 0;
+
+    pfds[1].fd = lfd;
+    pfds[1].events = POLLIN;
+    pfds[1].revents = 0;
+
+    pfds[2].fd = lfd;
+    pfds[2].events = POLLIN;
+    pfds[2].revents = 0;
+    ...(5个fd)
+
+    while(1)
+    {
+        int ret = poll(pfds, 5, -1);
+        for(int i = 0; i < 5; i++)
+        {
+            if(pfds[i].revents & POLLIN)
+            {
+                Accept()
+
+                .....
+
+
+                Read()/Write();
+            }
+        }
+    }
+
+---------------------------------------------------------------------------------------------------------------
+
+优点：自带数组结构。可以将监听集合和返回事件集合分离
+     拓展监听上限。超出1024上限
+缺点：不能跨平台。Linux
+      无法直接定位满足监听事件的文件描述符，编码难度较大

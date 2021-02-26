@@ -1,6 +1,6 @@
 //进行错误处理函数封装后的基本客户端模型，此处用于测试
 
-#include "../base.h"
+#include "../../base.h"
 
 int main(int argc, char *argv[])
 {

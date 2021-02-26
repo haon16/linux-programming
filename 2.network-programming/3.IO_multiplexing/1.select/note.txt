@@ -1,4 +1,6 @@
-select多路IO转接：
+多路IO转接:
+
+select：
     原理：借助内核，select来监听，客户端连接、数据通信事件
 
     void FD_ZERO(fd_set *set);          -- 清空一个文件描述符集合
