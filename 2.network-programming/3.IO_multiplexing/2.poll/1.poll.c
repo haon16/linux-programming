@@ -113,6 +113,6 @@ int main()
             }
         }
     }
-
+    Close(serv_sock);
     return 0;
 }

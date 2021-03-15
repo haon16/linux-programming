@@ -1,0 +1,151 @@
+多路IO转接：
+
+epoll:
+    int epoll_create(int size);
+    功能：创建一颗监听红黑树
+    参数：
+        size：创建的红黑树的监听节点数量（仅供内核参考）
+    返回值：
+        成功：指向新创建的红黑树的根节点的fd
+        失败：-1 errno
+
+    int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+    功能：操作监听红黑树
+    参数：
+        epfd：epoll_create函数的返回值
+        op  ：对该监听红黑树所做的操作
+                EPOLL_CTL_ADD：添加fd到监听红黑树
+                EPOLL_CTL_MOD：修改fd在监听红黑树上的监听事件
+                EPOLL_CTL_DEL：将一个fd从监听红黑树上摘下（取消监听）
+        fd  ：待监听的fd
+
+        event：本质是struct epoll_event结构体的地址
+                struct epoll_event 
+                {
+                    uint32_t     events;      // Epoll events：EPOLLIN/EPOLLOUT/EPOLLERR
+                    epoll_data_t data;        // User data variable
+                };
+                typedef union epoll_data
+                {
+                    void        *ptr;
+                    int          fd;          // 对应监听事件的fd
+                    uint32_t     u32;
+                    uint64_t     u64;
+                } epoll_data_t;
+    返回值：
+        成功：1
+        失败：-1， errno
+
+    int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+    功能：监听（默认是阻塞的）
+    参数：
+        epfd：epoll_create函数的返回值
+        events：传出参数，【数组】，满足监听条件的fd的所在的epoll_event结构体
+        maxevents：
+                数组元素的总个数。1024
+                struct epoll_event events[1024]
+        timeout：
+                timeout:超时时长。单位：毫秒
+                -1：阻塞等待
+                0：立即返回，不阻塞进程
+                >0：等待指定毫秒数
+    返回值：
+        > 0：满足监听的总个数。可以用作循环上限
+          0：没有fd满足监听事件
+        - 1：失败，errno
+
+---------------------------------------------------------------------------------------------------------------
+
+思路分析：
+    lfd = socket();
+    bind()
+    listen();
+    
+    int epfd = epoll_create(1024);                      // epfd:监听红黑树的树根
+    struct epoll_event temp;                            // temp:用来设置单个fd属性
+    temp.events = EPOLLIN;                              // 初始化lfd的监听属性
+    temp.data.fd = lfd;
+
+    epoll_ctl(epfd, EPOLL_CTL_ADD, lfd, &temp);         // 将lfd添加到监听红黑树上
+
+    struct epoll event ep[1024]                         // ep是epoll_wait()传出的满足监听事件的数组
+    while(1)
+    {
+        ret = epoll_wait(epfd, ep, 1024, -1)            // 实施监听
+        for(i = 0; i < ret; i++)
+        {
+            if(ep[i].data.fd == lfd)                    // lfd满足读事件，有新的客户端发起连接请求
+            {
+                cfd = accept();
+                temp.events = EPOLLIN;                  // 初始化cfd的监听属性
+                temp.fd = cfd;
+                epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &temp)
+            }
+            else                                        //cfd们满足读事件，有客户端写数据来
+            {
+                n = read(ep[i].data.fd, buf, sizeof(buf));
+                if(n == 0)
+                {
+                    close(ep[i].data.fd);
+                    epoll_ctl(epfd, EPOLL_CTL_DEL, ep[i].data.fd, NULL)     //将关闭的cfd从监听树上摘下
+                }
+                else if(n > 0)
+                {
+                    小-大
+                    write(epfd[i].data.fd, buf, n);
+                }
+            }
+        }
+    }
+
+---------------------------------------------------------------------------------------------------------------
+
+epoll事件模型：
+    ET模式（Edge Triggered）：        
+        边沿触发：缓冲区剩余未读尽的数据不会导致epoll_wait返回。新的事件满足，才会触发
+                struct epoll_event event;
+                event.events = EPOLLIN|EPOLLET;
+                
+    LT模式（Level Triggered）：         -- 默认采用模式
+        水平触发：缓冲区剩余未读尽的数据会导致epoll_wait返回
+
+    结论：
+        epoll的ET模式，高效模式，但是只支持非阻塞模式（LT支持阻塞和非阻塞模式）     -- 忙轮询
+        struct epoll_event event;
+        event.events = EPOLLIN|EPOLLET;
+        epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &event);
+        int flag = fcntl(cfd, F_GETFL)
+        flag |= O_NONBLOCK;
+        fcntl(cfd, F_SETFL, flag);
+
+    优点：高效。突破1024文件描述符
+    缺点：不能跨平台。Linux。
+
+---------------------------------------------------------------------------------------------------------------
+
+epoll反应堆模型：
+    epoll ET模型 + 非阻塞、轮循 + void*ptr (union epoll_data中的那个泛型指针)
+
+    原来：socket()、bind()、listen() -- epoll_create()创建监听红黑树 -- 返回epfd -- epoll_ctl()向树上添加一个监听fd -- while(1) --
+          -- epoll_wait()监听 -- 对应监听fd有事件产生 -- 返回监听满足数组 -- 判断返回数组元素 -- lfd满足 -- accept() -- cfd满足
+          -- read() -- 小->大 -- write()
+    
+    反应堆：不但要监听cfd的读时间，还要监听cfd的写事件  （平常练习一般没考虑不可写的情况，对端半关闭或者滑动窗口为0，都有可能不可写或写失败）
+          
+          socket()、bind()、listen() -- epoll_create()创建监听红黑树 -- 返回epfd -- epoll_ctl()向树上添加一个监听fd -- while(1) --
+          -- epoll_wait()监听 -- 对应监听fd有事件产生 -- 返回监听满足数组 -- 判断返回数组元素 -- lfd满足 -- accept() -- cfd满足
+          -- read() -- 小->大 -- cfd从监听红黑树上摘下 -- EPOLLOUT -- 回调函数 -- epoll_ctl() -- EPOLLCTL_ADD重新放到监听红黑树上监听写事件
+          -- 等待epoll_wait()返回 -- 说明cfd可写 -- write()回去 -- cfd从监听红黑树上摘下 -- EPOLLIN -- epoll_ctl()
+          -- EPOLL_CTL_ADD重新放到红黑树监听读事件 -- epoll_wait()监听
+
+    eventset函数：
+        设置回调函数：
+                    lfd --> acceptconn();
+                    cfd --> recvdata();
+                    cfd --> senddata();
+    eventadd函数：
+        将一个fd，添加到监听红黑树。设置监听读事件、还是监听写事件
+
+    网络编程：
+            read -- recv()
+            write -- send()
