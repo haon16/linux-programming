@@ -41,6 +41,7 @@ int main()
     struct event_base *base = event_base_new();
 
     //创建事件对象
+    //struct event *ev = event_new(base, fd, EV_WRITE, write_cb, NULL);
     struct event *ev = event_new(base, fd, EV_WRITE|EV_PERSIST, write_cb, NULL);
 
     //添加事件到event_base上
