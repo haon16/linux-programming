@@ -1,0 +1,33 @@
+请求协议：          --浏览器组织，发送
+GET /hello.c HTTP/1.1/r/n
+Host: 127.0.0.1:9999\r\n
+User-Agent: curl/7.29.0\r\n
+Accept: */*\r\n
+Accept-Language: ...\r\n
+Accept-Encoding: ...\r\n
+Connection:keep-alive\r\n
+If_Modified-Since:  ...\r\n
+【空行】\r\n
+
+应答协议：
+HTTP/1.1 200 OK
+Server: xhttpd
+Date: Fri, 18 Jul 2014 14:34:26 GMT
+Content-Type: text/plain; charset=iso-8859-1(必选项)
+Content-Length: 32 (要么不写或者传-1，要写务必精确)
+Content-Language: zh-CN
+Last-Modified: Fri, 18 Jul 2014 08:36:36 GMT
+Connection: close
+【空行】\r\n
+[数据起始 .... 数据终止]
+
+------------------------------------------------------
+
+1.getline()获取http协议的第一行
+2.从首部中拆分 GET、文件名、协议版本。 获取用户请求的文件名
+3.判断文件是否存在  stat()
+4.判断是文件还是目录
+5.是文件 -- open read 写回给浏览器
+6.先写http应答协议头：    HTTP/1.1 200 OK
+                        Content-Type:text/plain; charset=....
+7.写文件数据    
