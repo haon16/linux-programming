@@ -12,6 +12,7 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include <dirent.h>
+#include <ctype.h>
 
 #define MAXSIZE 2048
 
@@ -27,6 +28,9 @@ const char *get_file_type(const char *name);
 void send_respond_head(int cfd, int status, char *descrip, const char *type, int len);
 void send_file(int cfd, const char *file);
 void send_dir(int cfd, const char *dir);
+int hexit(char c);
+void encode_str(char *to, int tosize, const char *from);
+void decode_str(char *to, char *from);
 
 int main(int argc, char *argv[])
 {
@@ -279,6 +283,9 @@ void http_request(int cfd, const char *line)
     sscanf(line, "%[^ ] %[^ ] %[^ ]", method, path, protocol);      //正则[^ ] 非空的任意字符
     printf("method=%s, path=%s, protocol=%s\n", method, path, protocol);
 
+    //解码 将不能识别的中文乱码（%EA %A7之类）转换为中文（浏览器端url是以unicode编码发送的）            (解码测试未通过)
+    decode_str(path, path);
+    printf("path = %s", path);
     char *file = path + 1;      //去掉path中的'/'获取访问的文件名
     if(strcmp(path, "/") == 0)  //未指定访问的资源，默认显示资源目录中的内容
     {
@@ -422,7 +429,7 @@ void send_file(int cfd, const char *file)
     close(fd);
 }
 
-//发送目录内容
+//发送目录内容              (scandir找不到定义...目录部分未测试)
 void send_dir(int cfd, const char *dirname)
 {
     //拼一个html页面<table></table>
@@ -436,8 +443,8 @@ void send_dir(int cfd, const char *dirname)
 
     //目录项二级指针
     struct dirent** ptr;
-    int num = scandir(dirname, &ptr, NULL, alphasort);
-
+    //int num = scandir(dirname, &ptr, NULL, alphasort);
+    int num = 0;
     //遍历
     for(int i = 0; i < num; ++i)
     {
@@ -449,6 +456,7 @@ void send_dir(int cfd, const char *dirname)
         struct stat st;
         stat(path, &st);
 
+        //编码生成 %EA %A7 之类的东西
         encode_str(enstr, sizeof(enstr), name);
 
         if(S_ISREG(st.st_mode))
@@ -487,4 +495,51 @@ void send_dir(int cfd, const char *dirname)
     }
 }
 
-//传文本数据可直接用命令测试：curl http://127.0.0.1:9999/hello.c
+int hexit(char c)
+{
+    if(c >= '0' && c <= '9')
+        return c - '0';
+    if(c >= 'a' && c <= 'f');
+        return c - 'a' + 10;
+    if(c >= 'a' && c <= 'F')
+        return c - 'A' + 10;
+
+    return 0;
+}
+
+void encode_str(char *to, int tosize, const char *from)
+{
+    for(int tolen = 0; *from != '\0' && tolen+4 < tosize; ++from)
+    {
+        if(isalnum(*from) || strchr("/_.-~", *from) != (char*)0)
+        {
+            *to = *from;
+            ++to;
+            ++tolen;
+        }
+        else
+        {
+            sprintf(to, "%%%02x", (int)*from & 0xff);
+            to += 3;
+            tolen += 3;
+        }
+    }
+    *to = '\0';
+}
+
+void decode_str(char *to, char *from)
+{
+    for(; *from != '\0'; ++to, ++from)
+    {
+        if(from[0] == '%' && isxdigit(from[1]) && isxdigit(from[2]))
+        {
+            *to = hexit(from[1]) * 16 + hexit(from[2]);
+            from += 2;
+        }
+        else
+        {
+            *to = *from;
+        }
+    }
+    *to = '\0';
+}
