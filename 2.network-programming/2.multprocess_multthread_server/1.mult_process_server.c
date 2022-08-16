@@ -28,7 +28,7 @@ int main()
     bzero(&serv_adr, sizeof(serv_adr));
     serv_adr.sin_family = AF_INET;
     serv_adr.sin_port = htons(9999);
-    serv_adr.sin_family = htonl(INADDR_ANY);
+    serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     //int opt = 1;     
     //setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt));
